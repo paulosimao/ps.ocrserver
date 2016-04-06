@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>paulosimao OCR Server</title>
+    <script src="jquery.js"></script>
+</head>
+<body>
+<h1>paulosimao - OCR Solution</h1>
+<form action="/dopost" method="post" enctype="multipart/form-data" name="form" onsubmit="dosubmit(); return false;">
+    Lang: <select id="lang">
+    <option value="por">por</option>
+    <option value="eng">eng</option>
+</select>
+
+
+    Mode:<select form="form1" name="respmode" id="respmode">
+    <option id="json" value="json" name="json">JSON</option>
+    <option id="text" value="json" name="json">TEXT</option>
+</select>
+    <input type="hidden" name="respmodeh" id="respmodeh">
+    <input type="file" name="file" id="file">
+    <input type="submit">
+    <button onclick="canceljob();return false;">Cancel</button>
+</form>
+<textarea id="out" cols="100" rows="30"></textarea>
+<script>
+
+    var pre = '';
+
+
+    function canceljob() {
+        $.get('/cancel/' + pre, function (res) {
+            if (res.msg == 'ok') {
+                alert('Job Cancelled');
+            } else {
+                alert(JSON.stringify(res, null, 4));
+            }
+        });
+    }
+
+    function dosubmit() {
+
+        var data = new FormData();
+        if ($('#file') && $('#file')[0] && $('#file')[0].files) {
+            $.each($('#file')[0].files, function (i, file) {
+                data.append('file-' + i, file);
+            });
+        }
+
+        var opt = document.getElementById("respmode");
+        var val = opt.options[opt.selectedIndex].value;
+
+        data.append('mode', val);
+
+        var opt = document.getElementById("lang");
+        var val = opt.options[opt.selectedIndex].value;
+
+        data.append('lang', val);
+
+
+        function loopresult() {
+            $.get('/getprogress/' + pre, function (data) {
+                $('#out').val(JSON.stringify(data, null, 4));
+                if (data.status != 'error' && data.status != 'job-end') {
+                    setTimeout(loopresult, 500);
+                }
+            });
+        }
+
+
+        $.post({
+            url        : '/dopost',
+            data       : data,
+            cache      : false,
+            contentType: false,
+            processData: false,
+            success    : function (data) {
+                pre = data.pre;
+                setTimeout(loopresult, 500);
+            }
+        });
+
+    }
+
+</script>
+</body>
+</html>
